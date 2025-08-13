@@ -3,6 +3,15 @@
 A modern, lightweight PDF-to-speech application built with **PyQt5** and **Piper TTS**.  
 It allows you to open PDF files, select text, and have it read aloud using high-quality offline voices.
 
+
+## Screenshots
+
+### Main Interface
+![Main UI](screenshots/)
+
+### Voice Selection
+![Voice Selection](screenshots/)
+
 ---
 
 ##  Features
