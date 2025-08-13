@@ -8,9 +8,9 @@ DEFAULT_LIB = Path(os.environ.get("PDF_LIBRARY", "Path/to/your/pdf/library")).ex
 CACHE_DIR   = Path.home() / ".cache" / "pdf_voice_reader" / "thumbs"
 VOICE_DIRS  = [
     os.path.expanduser("~/.local/share/piper/voices"),
-    "/usr/share/piper/voices",  #your path to your piper models
+    "/usr/share/piper/voices",  
     "/usr/local/share/piper/voices",
-]
+] #your path to your piper models, the app will look into all of these paths
 
 # Virtualization
 WINDOW_SIZE    = 10   # pages rendered at once
