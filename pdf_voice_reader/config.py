@@ -2,13 +2,13 @@ from __future__ import annotations
 import os
 from pathlib import Path
 
-APP_NAME   = "PDF Voice Reader"
+APP_NAME   = "Readie chan"
 STATE_FILE = Path.home() / ".pdf_voice_gui_state.json"
-DEFAULT_LIB = Path(os.environ.get("PDF_LIBRARY", "./library")).expanduser()
+DEFAULT_LIB = Path(os.environ.get("PDF_LIBRARY", "Path/to/your/pdf/library")).expanduser()
 CACHE_DIR   = Path.home() / ".cache" / "pdf_voice_reader" / "thumbs"
 VOICE_DIRS  = [
     os.path.expanduser("~/.local/share/piper/voices"),
-    "/usr/share/piper/voices",
+    "/usr/share/piper/voices",  #your path to your piper models
     "/usr/local/share/piper/voices",
 ]
 
