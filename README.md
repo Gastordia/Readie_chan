@@ -7,10 +7,10 @@ It allows you to open PDF files, select text, and have it read aloud using high-
 ## Screenshots
 
 ### Main Interface
-![Main UI](screenshots/)
+![Main UI](screenshots/main.png)
 
-### Voice Selection
-![Voice Selection](screenshots/)
+### Text Selection for TTS
+![Voice Selection](screenshots/text_selection.png)
 
 ---
 
