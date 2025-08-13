@@ -1,0 +1,6 @@
+piper-tts
+pymupdf
+prompt_toolkit
+PySide6
+PyMuPDF
+Pillow
