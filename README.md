@@ -16,7 +16,7 @@ It allows you to open PDF files, select text, and have it read aloud using high-
 ---
 
 
-## 🛠 Installation
+## Installation
 
 1. **Clone the repository**
    ```bash
@@ -56,24 +56,6 @@ Keyboard Shortcuts
     Space — Start/Pause reading
 
     Esc — Exit focus mode
-
- Project Structure
-
-pdf-voice-reader/
-│
-├── gui.py                     # Application entry point
-├── pdf_voice_reader/
-│   ├── app.py                  # Main app bootstrap
-│   ├── controller.py           # PDF and TTS controller
-│   ├── tts.py                  # Piper TTS integration
-│   ├── util.py                 # Helper functions
-│   ├── views/
-│   │   ├── main_window.py      # Main PyQt5 window
-│   │   ├── ...
-│   ├── model/
-│   │   ├── pdfdoc.py           # PDF handling logic
-│   └── ...
-└── requirements.txt
 
  Voice Models
 
