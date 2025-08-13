@@ -8,16 +8,17 @@ from .page import PageWidget
 
 
 class ContinuousPDFView(QtWidgets.QScrollArea):
-    """Virtualized, continuous PDF viewer with lazy rendering (no resume logic)."""
-
-    wordClicked = QtCore.Signal(int, int)
-    firstVisibleChanged = QtCore.Signal(int)  # keep only for spinner sync
+    # Signals exposed to MainWindow
+    wordClicked = QtCore.Signal(int, int)        # (page_index, word_index)
+    textSelected = QtCore.Signal(int, str)       # (page_index, text)
+    firstVisibleChanged = QtCore.Signal(int)     # first visible page index (0-based)
 
     def __init__(self):
         super().__init__()
 
         self.doc: Optional[PDFDoc] = None
 
+        # scrolling container
         self.container = QtWidgets.QWidget()
         self.vbox = QtWidgets.QVBoxLayout(self.container)
         self.vbox.setContentsMargins(20, 20, 20, 20)
@@ -25,12 +26,16 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
         self.setWidget(self.container)
         self.setWidgetResizable(True)
 
+        # pages + render state
         self.pages: List[PageWidget] = []
         self.scale: float = 1.2
         self.fit_mode: Optional[str] = "width"
         self.loaded: Dict[int, bool] = {}
+        self._select_mode: bool = False
+
         self._last_first_visible: int = 0
 
+        # re-render when viewport changes or scrolled
         self.viewport().installEventFilter(self)
         self.verticalScrollBar().valueChanged.connect(
             lambda *_: QtCore.QTimer.singleShot(0, self._render_visible)
@@ -40,7 +45,9 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
         )
 
     # ---------- Public API ----------
+
     def set_document(self, doc: PDFDoc):
+        """Set the model doc and (re)build page widgets."""
         self.doc = doc
 
         for p in self.pages:
@@ -50,7 +57,14 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
 
         for i in range(doc.page_count):
             pw = PageWidget(doc, i)
+
+            # forward events if PageWidget exposes them
             pw.wordClicked.connect(self.wordClicked)
+            if hasattr(pw, "selectionMade"):
+                pw.selectionMade.connect(self.textSelected)
+            if hasattr(pw, "setSelectionEnabled"):
+                pw.setSelectionEnabled(self._select_mode)
+
             self.vbox.addWidget(pw)
             self.pages.append(pw)
 
@@ -59,17 +73,20 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
         QtCore.QTimer.singleShot(0, self._render_visible)
 
     def set_fit_mode(self, mode: Optional[str]):
+        """'width', 'page', or None (free zoom)."""
         self.fit_mode = mode
         self._refresh_placeholders()
         self._render_visible()
 
     def set_zoom(self, scale: float):
+        """Directly set zoom; disables fit mode."""
         self.scale = max(MIN_SCALE, min(MAX_SCALE, float(scale)))
         self.fit_mode = None
         self._refresh_placeholders()
         self._render_visible()
 
     def go_to_page(self, page_no: int):
+        """Scroll to 1-based page number."""
         if not self.pages:
             return
         page_no = max(1, min(page_no, len(self.pages)))
@@ -77,7 +94,18 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
         self.verticalScrollBar().setValue(w.pos().y())
         self._render_visible()
 
+    def set_select_mode(self, enabled: bool):
+        """Enable/disable on-page text selection for all pages."""
+        self._select_mode = bool(enabled)
+        for pw in self.pages:
+            if hasattr(pw, "setSelectionEnabled"):
+                pw.setSelectionEnabled(self._select_mode)
+        self.viewport().setCursor(
+            QtCore.Qt.IBeamCursor if self._select_mode else QtCore.Qt.ArrowCursor
+        )
+
     # ---------- Events ----------
+
     def eventFilter(self, obj, ev):
         if obj is self.viewport() and ev.type() in (
             QtCore.QEvent.Resize,
@@ -88,15 +116,20 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
             QtCore.QTimer.singleShot(0, self._render_visible)
         return super().eventFilter(obj, ev)
 
-    # ---------- Internals ----------
+    # ---------- Internal helpers ----------
+
     def _current_scale_for(self, base_pm: QtGui.QPixmap) -> float:
         s = self.scale
         vr = self.viewport().rect()
-        if self.fit_mode == "width" and base_pm.width() > 0:
-            s = (vr.width() - 60) / base_pm.width()
-        elif self.fit_mode == "page" and base_pm.width() > 0 and base_pm.height() > 0:
-            s = min((vr.width() - 60) / base_pm.width(),
-                    (vr.height() - 60) / base_pm.height())
+        if self.fit_mode == "width":
+            if base_pm.width() > 0:
+                s = (vr.width() - 60) / base_pm.width()
+        elif self.fit_mode == "page":
+            if base_pm.width() > 0 and base_pm.height() > 0:
+                s = min(
+                    (vr.width() - 60) / base_pm.width(),
+                    (vr.height() - 60) / base_pm.height(),
+                )
         return max(MIN_SCALE, min(MAX_SCALE, s))
 
     def _refresh_placeholders(self):
@@ -126,21 +159,25 @@ class ContinuousPDFView(QtWidgets.QScrollArea):
         scale = self._current_scale_for(base)
         first = self._find_first_visible_index()
 
+        # emit firstVisibleChanged when it actually changes
         if first != self._last_first_visible:
             self._last_first_visible = first
             self.firstVisibleChanged.emit(first)
 
+        # virtualized window of pages
         start = max(0, first - PRELOAD_MARGIN)
-        end = min(len(self.pages) - 1,
-                  start + WINDOW_SIZE - 1 + PRELOAD_MARGIN * 2)
+        end = min(len(self.pages) - 1, start + WINDOW_SIZE - 1 + PRELOAD_MARGIN * 2)
 
+        # load in-window pages
         for i in range(start, end + 1):
             if not self.loaded.get(i):
                 pm = self.doc.render_page(i, scale)
                 self.pages[i].set_pixmap_scaled(pm, scale)
                 self.loaded[i] = True
 
+        # unload outside pages
         for i in list(self.loaded.keys()):
             if self.loaded.get(i) and (i < start or i > end):
                 self.pages[i].unload(scale)
                 self.loaded[i] = False
+    
