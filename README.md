@@ -87,3 +87,13 @@ curl -L -o ~/.local/share/piper/voices/en_US-ryan-high.onnx.json \
     No voices found: Check the VOICE_DIRS list in util.py and place your voices accordingly.
 
     Focus mode stuck: Press Esc to exit or disable it from the toolbar.
+
+  Making a Shell Alias (Optional)
+
+  ```bash
+ echo 'alias readie="python3 /Path/To/gui.py"' >> ~/.bashrc
+ source ~/.bashrc
+   
+  ```
+
+now you can run Readie Chan just by typing readie on the terminal :3
